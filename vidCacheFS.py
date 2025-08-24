@@ -208,6 +208,118 @@ class CacheManager:
         # kind in ('head','tail','meta','full')
         safe_rel = relpath.lstrip('/')
         return os.path.join(self.cache_dir, safe_rel + f'.{kind}')
+        
+    # --- Added: one-time reconciliation on startup ---
+    def reconcile_startup(self, head_bytes, tail_bytes, max_files):
+        """Executed once after startup to:
+        1. Remove head/tail cache pieces whose size no longer matches configured head/tail bytes.
+        2. If cached file groups (.meta present) exceed max_files, prune oldest groups (LRU based on atime of their parts).
+        Only files with a .meta are considered valid groups. Subtitles (.full) are not resized.
+        """
+        with self.lock:
+            if self.verbose:
+                logging.info(f"Starting cache reconciliation: head_bytes={head_bytes}, tail_bytes={tail_bytes}, max_files={max_files}")
+            # Build group map: base_path (without extension) -> dict(parts)
+            groups = {}
+            for root, _, files in os.walk(self.cache_dir):
+                for name in files:
+                    if not (name.endswith('.meta') or name.endswith('.head') or name.endswith('.tail') or name.endswith('.full')):
+                        continue
+                    full = os.path.join(root, name)
+                    base, _ = os.path.splitext(full)
+                    g = groups.setdefault(base, {'meta': None, 'head': None, 'tail': None, 'full': None})
+                    if name.endswith('.meta'):
+                        g['meta'] = full
+                    elif name.endswith('.head'):
+                        g['head'] = full
+                    elif name.endswith('.tail'):
+                        g['tail'] = full
+                    elif name.endswith('.full'):
+                        g['full'] = full
+            # Keep only groups having meta
+            groups = {b: p for b, p in groups.items() if p['meta']}
+            # Pass 1: resize validation (delete mismatched head/tail)
+            for base, parts in groups.items():
+                try:
+                    with open(parts['meta'], 'r') as f:
+                        meta = json.load(f)
+                    fsize = meta.get('size')
+                    if fsize is None:
+                        continue
+                    # Expected sizes
+                    expected_head_size = min(head_bytes, fsize) if head_bytes > 0 else 0
+                    expected_tail_size = min(tail_bytes, fsize) if tail_bytes > 0 else 0
+                    # head check
+                    hp = parts.get('head')
+                    if hp and os.path.exists(hp):
+                        try:
+                            if os.path.getsize(hp) != expected_head_size:
+                                os.remove(hp)
+                                if hp in self.lru:
+                                    sz,_ = self.lru.pop(hp)
+                                    self.current_cache_bytes -= sz
+                                if self.verbose:
+                                    logging.info(f"Removed mismatched head cache: {hp}")
+                        except Exception:
+                            pass
+                    # tail check
+                    tp = parts.get('tail')
+                    if tp and os.path.exists(tp):
+                        try:
+                            if os.path.getsize(tp) != expected_tail_size:
+                                os.remove(tp)
+                                if tp in self.lru:
+                                    sz,_ = self.lru.pop(tp)
+                                    self.current_cache_bytes -= sz
+                                if self.verbose:
+                                    logging.info(f"Removed mismatched tail cache: {tp}")
+                        except Exception:
+                            pass
+                except Exception:
+                    continue
+            # Pass 2: enforce max_files (count of groups)
+            group_count = len(groups)
+            if group_count > max_files:
+                # Build age list using min atime among existing part files
+                age_list = []  # (atime, base, parts)
+                for base, parts in groups.items():
+                    at_list = []
+                    for p in (parts.get('head'), parts.get('tail'), parts.get('full')):
+                        if p and os.path.exists(p):
+                            try:
+                                at_list.append(os.path.getatime(p))
+                            except Exception:
+                                pass
+                    if not at_list:  # fallback to meta
+                        try:
+                            at_list.append(os.path.getatime(parts['meta']))
+                        except Exception:
+                            at_list.append(time.time())
+                    age_list.append((min(at_list), base, parts))
+                age_list.sort(key=lambda x: x[0])  # oldest first
+                to_remove = group_count - max_files
+                removed = 0
+                for _, base, parts in age_list:
+                    if removed >= to_remove:
+                        break
+                    for p in (parts.get('head'), parts.get('tail'), parts.get('full'), parts.get('meta')):
+                        if p and os.path.exists(p):
+                            try:
+                                size = os.path.getsize(p)
+                            except Exception:
+                                size = 0
+                            try:
+                                os.remove(p)
+                                if p in self.lru:
+                                    sz,_ = self.lru.pop(p)
+                                    self.current_cache_bytes -= sz
+                                else:
+                                    self.current_cache_bytes -= size
+                            except Exception:
+                                pass
+                    removed += 1
+                if self.verbose:
+                    logging.info(f"Startup prune: removed {removed} old cached groups (now {group_count-removed}/{max_files}).")
 
 
 # ---------- Scheduler: populates cache on interval ----------
@@ -1478,6 +1590,13 @@ class MultiMountManager:
     
         # Initialize cache manager
         cache_mgr = CacheManager(cache_dir, max_cache, verbose=verbose)
+
+        # One-time reconciliation (size mismatch + max_files prune)
+        try:
+            cache_mgr.reconcile_startup(head_bytes, tail_bytes, max_files)
+        except Exception as e:
+            if verbose:
+                logging.warning(f"Startup reconciliation failed: {e}")
         
         # Initialize scheduler for background caching
         use_cache_db = mount_config.get('USE_CACHE_DB', self.config['GLOBAL'].get('USE_CACHE_DB', False))
