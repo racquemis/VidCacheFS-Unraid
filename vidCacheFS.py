@@ -1248,24 +1248,24 @@ class VidCacheFS(MyLoggingMixIn, Operations):
                 else:
                     tail_start = fsize - self.tail_bytes
             
-            # Debug logging for tail cache checks
-            if self.verbose:
-                bytes_from_end = fsize - offset
-                logging.debug(f"Tail params: fsize={fsize}, tail_bytes={self.tail_bytes}, tail_start={tail_start}")
-                logging.debug(f"Offset check: offset={offset}, bytes_from_end={bytes_from_end}")
-                logging.debug(f"Should use tail cache: {offset >= tail_start}")
-                if os.path.exists(tail_path):
-                    tail_size = os.path.getsize(tail_path)
-                    logging.debug(f"Tail cache file size: {tail_size}")
-                    
-                    # Check if this request would be in bounds of the tail file
-                    if offset >= tail_start:
-                        tail_offset = offset - tail_start
-                        logging.debug(f"Calculated tail_offset={tail_offset}, valid range: 0-{tail_size-1}")
-                        if 0 <= tail_offset < tail_size:
-                            logging.debug("Tail offset is in valid range")
-                        else:
-                            logging.debug("Tail offset is OUT OF RANGE!")
+                # Debug logging for tail cache checks
+                if self.verbose:
+                    bytes_from_end = fsize - offset
+                    logging.debug(f"Tail params: fsize={fsize}, tail_bytes={self.tail_bytes}, tail_start={tail_start}")
+                    logging.debug(f"Offset check: offset={offset}, bytes_from_end={bytes_from_end}")
+                    logging.debug(f"Should use tail cache: {offset >= tail_start}")
+                    if os.path.exists(tail_path):
+                        tail_size = os.path.getsize(tail_path)
+                        logging.debug(f"Tail cache file size: {tail_size}")
+                        
+                        # Check if this request would be in bounds of the tail file
+                        if offset >= tail_start:
+                            tail_offset = offset - tail_start
+                            logging.debug(f"Calculated tail_offset={tail_offset}, valid range: 0-{tail_size-1}")
+                            if 0 <= tail_offset < tail_size:
+                                logging.debug("Tail offset is in valid range")
+                            else:
+                                logging.debug("Tail offset is OUT OF RANGE!")
             
             # Check if request is entirely within tail cache
             if offset >= tail_start and os.path.exists(tail_path):
