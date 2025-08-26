@@ -81,8 +81,8 @@ Configuration is provided as a JSON object, either embedded in the script or in 
   - `CHECK_FILE_MODIFICATIONS`: Enables periodic file modification checks if inotify is unavailable. Could cause drive spinup at scheduled interval. Should not be used when inotify is available.
 - `MOUNTS`: Array of mount configurations. Each object defines a separate cache/mount.
   - `BACKING_DIR`: Directory on HDD to mirror.
-  - `MOUNT_POINT`: FUSE mount location.
-  - `CACHE_DIR`: SSD cache storage location.
+  - `MOUNT_POINT`: FUSE mount location. Don't mount within an existing share  path. use a mount point on /mnt e.g. /mnt/ssd_cache
+  - `CACHE_DIR`: SSD cache storage location. Use dedicated cache pool mountpoint for this. or mount into existing cache with /mnt/cache/ssd_cache (don't mount into existing folders within the cache directory)
   - `MAX_FILES`: Maximum number of files to cache for this mount. Once this limit is reached, the least recently used files will be evicted from the cache to make room for new ones. The system will calculate the total space needed based on this number and the head/tail sizes.
   - `HEAD_BYTES` / `TAIL_BYTES`: Number of bytes to cache from start/end of files.
   - `SCHEDULES`: Pre-warm cache schedules (scan interval, path, file pattern).
