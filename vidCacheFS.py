@@ -533,7 +533,7 @@ class Scheduler(threading.Thread):
         
         try:
             # Process files from buffer (most recently modified first)
-            progress_interval = max(1, min(100, buffer_size // 20))  # Report progress at 5% intervals
+            progress_interval = max(1, int(buffer_size * 0.1))  # Report progress at 10% intervals
             
             for i, (filepath, (mtime, size_estimate, relpath)) in enumerate(list(self.cache_buffer.items())):
                 try:
