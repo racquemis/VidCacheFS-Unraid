@@ -133,11 +133,12 @@ You can define as many mount points as needed, each with its own cache policy an
 
 8. Press 'Run in background' on the mount script to start the fuse filesystem. It should now begin caching. You can open the log of the script to validate it is running.
 
-## Important Considerations
+## Important Considerations & Tips
 
 - Docker containers that use the cache share must be started only after the filesystem has been mounted. Consider issuing a delayed start for these containers to ensure the filesystem is fully available before they attempt to access cached files.
  
 - If the filesystem is restarted or remounted, any Docker containers using the cache must also be restarted, otherwise the cache mount inside the container won't populate.
+- If you use a dedicated cache pool for VidCacheFS consider setting the "Enable user share assignment" option to False under the cache pool settings. This will prevent the cache folders from appearing as user shares.
 
 ## Plex Configuration
 
@@ -147,8 +148,7 @@ Set the container to delayed start to ensure it is started after the file system
 To make Plex use the new cache mount point:
 1. Edit your libraries and add a new path pointing to the `/media-cache` folder.
 2. Do not remove the original path yet, as doing so will cause Plex to lose all metadata and treat all media as new.
-3. After the Plex libraries have finished updating, play the cached version of a video file to check if VidCacheFS is functioning properly.
-4. When satisfied that everything works, you can delete the original path to the media files from the library configuration.
+3. After the Plex libraries have finished updating, delete the original path to the media files from the library configuration.
 
 Disable auto emptying of the trash in Plex and if possible periodic scanning. If for whatever reason file-mount fails the media-cache folder within Plex will look empty you don't want your libraries to be updated to empty.
 
