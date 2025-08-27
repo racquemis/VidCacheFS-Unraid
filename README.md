@@ -161,7 +161,8 @@ When running VidCacheFS directly from the command line instead of through the Us
 | `--config <path>`, `-c <path>`| Path to the configuration JSON file (optional).                                                |
 | `--foreground`                | Run the FUSE filesystem in the foreground for debugging purposes. Only mounts the first mount point listed.                             |
 | `--read-only`                 | Mount the filesystem as read-only (can be used without root).                                 |
-| `--use-builtin-config`        | Use the built-in configuration instead of an external config file.                             |
+| `--use-builtin-config`        | Use the built-in configuration instead of an external config file if present                             |
+| `--debug`                     | Enable debug log output                             |
 
 Example usage:
 ```bash
