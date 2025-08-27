@@ -166,5 +166,5 @@ When running VidCacheFS directly from the command line instead of through the Us
 
 Example usage:
 ```bash
-python fuse_ssd_cache_head_tail.py --config /path/to/config.json --foreground --read-only
+python vidCacheFS.py --config /path/to/config.json --foreground --debug
 ```
