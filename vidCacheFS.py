@@ -463,7 +463,7 @@ class Scheduler(threading.Thread):
                                 if self.verbose:
                                     logging.warning(f"Error processing file {full_path}: {e}")
             
-            if self.verbose:
+            if self.verbose and total_files_found > 0:
                 logging.info(f"Found {total_files_found} files matching pattern(s) {patterns} in {path}")
                 logging.info(f"Buffer now contains {len(self.cache_buffer)} files ({self.buffer_size_bytes/1024/1024:.2f} MB)")
                 
@@ -725,8 +725,6 @@ class Scheduler(threading.Thread):
             length = min(self.head_bytes, metadata['size'])
             if length > 0:
                 try:
-                    if self.verbose: 
-                        logging.info(f"Caching head {length} bytes for {relpath}")
                     ensure_parent_dir(head_path)
                     safe_copy_range(fullpath, head_path, length, offset=0)
                     self.cache_manager.add(head_path)
@@ -744,8 +742,6 @@ class Scheduler(threading.Thread):
                 length = self.tail_bytes
             if length > 0:
                 try:
-                    if self.verbose: 
-                        logging.info(f"Caching tail {length} bytes for {relpath}")
                     ensure_parent_dir(tail_path)
                     safe_copy_range(fullpath, tail_path, length, offset=offset)
                     self.cache_manager.add(tail_path)
