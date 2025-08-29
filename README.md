@@ -32,12 +32,12 @@ VidCacheFS is designed to minimize drive spinup and optimize playback performanc
 
 ## Requirements
 - Unraid
-  - Python plugin
-  - User scripts plugin
-- Python 3.x
+  - Python 3 for Unraid Plugin
+  - CA User scripts plugin
+  - Dynamix Cache Dirs
 - fusepy (`pip install fusepy`)
 - inotify (`pip install inotify`)
-- Sufficient SSD storage for caching
+- Sufficient SSD storage for caching. Dedicated drive is best.
 
 ## Configuration
 
